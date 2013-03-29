@@ -1,21 +1,38 @@
 #!/usr/bin/env escript
 %% -*- erlang -*-
 
-main([Host, BodySize, ByteDelay]) ->
-	Body = [97 || _ <- lists:seq(1,list_to_integer(BodySize))] ++ [$!],
-	{ok, Sock} = gen_tcp:connect(Host, 80, [binary, {packet, 0}]),
-	ContentLength = iolist_size(Body),
-	ok = gen_tcp:send(Sock, "POST / HTTP/1.1\r\n"),
-	ok = gen_tcp:send(Sock, "Host: " ++ Host ++ "\r\n"),
-	ok = gen_tcp:send(Sock, "Content-Type: application/x-www-form-urlencoded\r\n"),
-	ok = gen_tcp:send(Sock, "Content-Length: " ++ integer_to_list(ContentLength) ++ "\r\n\r\n"),
-	case list_to_integer(ByteDelay) of
-		0 ->
-			ok = gen_tcp:send(Sock, Body);
-		Delay ->
-			[begin gen_tcp:send(Sock, [B]), timer:sleep(Delay) end || B <- Body]
-	end,
-	ok = gen_tcp:close(Sock);
+main([Host, BodySize, MaxPacketSize, ByteDelay]) ->
+    random:seed(os:timestamp()),
+    Body = [97 || _ <- lists:seq(1,list_to_integer(BodySize))] ++ [$!],
+    {ok, Sock} = gen_tcp:connect(Host, 80, [binary, {packet, 0}]),
+    ContentLength = iolist_size(Body),
+    ok = gen_tcp:send(Sock, "POST / HTTP/1.1\r\n"),
+    ok = gen_tcp:send(Sock, "Host: " ++ Host ++ "\r\n"),
+    ok = gen_tcp:send(Sock, "Content-Type: application/x-www-form-urlencoded\r\n"),
+    ok = gen_tcp:send(Sock, "Content-Length: " ++ integer_to_list(ContentLength) ++ "\r\n\r\n"),
+    case list_to_integer(ByteDelay) of
+        0 ->
+            ok = gen_tcp:send(Sock, Body);
+        Delay ->
+            send_data(Sock, list_to_binary(Body), list_to_integer(MaxPacketSize), Delay)
+    end,
+    ok = gen_tcp:close(Sock);
 
 main(_) ->
-	io:format("usage: slow_client HOST BODY_SIZE MS_DELAY~n").
+    io:format("usage: slow_client HOST BODY_SIZE MAX_PACKET_SIZE MS_DELAY~n").
+
+send_data(_Sock, <<>>, _MaxSize, _Delay) ->
+    ok;
+
+send_data(Sock, Body, MaxSize, Delay) ->
+    R =
+        case size(Body) > MaxSize of
+            true -> MaxSize;
+            false -> size(Body)
+        end,
+    Size = random:uniform(R),
+    <<Chunk:Size/binary, Rest/binary>> = Body,
+    io:format("sending chunk of ~w bytes~n", [Size]),
+    gen_tcp:send(Sock, Chunk),
+    timer:sleep(Delay),
+    send_data(Sock, Rest, MaxSize, Delay).
