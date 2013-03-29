@@ -41,21 +41,21 @@ handle_cast(_Msg, State) ->
 %%--------------------------------------------------------------------
 handle_info(timeout, LSock) ->
     {ok, Sock} = gen_tcp:accept(LSock),
-    io:format("accepted ~p~n", [Sock]),
+    io:format("[~w] accepted ~p~n", [time_to_ms(os:timestamp()), Sock]),
     inet:setopts(Sock,[{active,once}]),
     {noreply, LSock};
 
 handle_info({tcp,Sock,Data}, State) ->
-    io:format("recv'd ~p~n", [Data]),
+    io:format("[~w] recv'd ~p~n", [time_to_ms(os:timestamp()), Data]),
     inet:setopts(Sock,[{active,once}]),
     {noreply, State, ?TIMEOUT};
 
 handle_info({tcp_closed,_Sock}, State) ->
-    io:format("closed~n"),
+    io:format("[~w] closed~n", [time_to_ms(os:timestamp())]),
     {noreply, State, 0};
 
 handle_info({tcp_error,_Sock,Reason}, State) ->
-    io:format("error: ~p~n", [Reason]),
+    io:format("[~w] error: ~p~n", [time_to_ms(os:timestamp()), Reason]),
     {noreply, State, 0};
 
 handle_info(_Msg, State) ->
@@ -72,3 +72,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+time_to_ms(Time) ->
+  time_to_microseconds(Time) div 1000.
+
+time_to_microseconds(Time) ->
+  timer:now_diff(Time,{0,0,0}).
