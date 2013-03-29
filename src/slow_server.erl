@@ -9,6 +9,8 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
+-define(TIMEOUT, 2000).
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -46,7 +48,7 @@ handle_info(timeout, LSock) ->
 handle_info({tcp,Sock,Data}, State) ->
     io:format("recv'd ~p~n", [Data]),
     inet:setopts(Sock,[{active,once}]),
-    {noreply, State};
+    {noreply, State, ?TIMEOUT};
 
 handle_info({tcp_closed,_Sock}, State) ->
     io:format("closed~n"),
