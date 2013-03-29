@@ -1,0 +1,21 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+
+main([Host, BodySize, ByteDelay]) ->
+	Body = [97 || _ <- lists:seq(1,list_to_integer(BodySize))] ++ [$!],
+	{ok, Sock} = gen_tcp:connect(Host, 80, [binary, {packet, 0}]),
+	ContentLength = iolist_size(Body),
+	ok = gen_tcp:send(Sock, "POST / HTTP/1.1\r\n"),
+	ok = gen_tcp:send(Sock, "Host: " ++ Host ++ "\r\n"),
+	ok = gen_tcp:send(Sock, "Content-Type: application/x-www-form-urlencoded\r\n"),
+	ok = gen_tcp:send(Sock, "Content-Length: " ++ integer_to_list(ContentLength) ++ "\r\n\r\n"),
+	case list_to_integer(ByteDelay) of
+		0 ->
+			ok = gen_tcp:send(Sock, Body);
+		Delay ->
+			[begin gen_tcp:send(Sock, [B]), timer:sleep(Delay) end || B <- Body]
+	end,
+	ok = gen_tcp:close(Sock);
+
+main(_) ->
+	io:format("usage: slow_client HOST BODY_SIZE MS_DELAY~n").

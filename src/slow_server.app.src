@@ -1,0 +1,10 @@
+{application, slow_server,
+ [
+  {description, "Slow Server"},
+  {vsn, "1"},
+  {registered, []},
+  {modules, []},
+  {applications, [kernel,stdlib]},
+  {mod, { slow_server_app, []}},
+  {env, []}
+ ]}.
