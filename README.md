@@ -36,3 +36,6 @@ $ heroku logs -t
 ```
 $ heroku run bin/slow_client YOURAPPNAME.herokuapp.com 1000 100 500
 ```
+
+[Sample run](https://gist.github.com/JacobVorreuter/5274515)
+
